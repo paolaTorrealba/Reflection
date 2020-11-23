@@ -75,7 +75,7 @@ public class UBean {
 		for (Method m : metodos) {
 			if (m.getName().equalsIgnoreCase(nombreAttAGettear)) {
 				try {
-					getObtenido = m.invoke(atributo, null);
+					getObtenido = m.invoke(obj, null);
 				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 					e.printStackTrace();
 				}

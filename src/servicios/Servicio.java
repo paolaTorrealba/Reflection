@@ -1,4 +1,4 @@
-package service;
+package servicios;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -13,9 +13,9 @@ import anotaciones.Columna;
 import anotaciones.Id;
 import anotaciones.Tabla;
 import utilidades.UBean;
-import utilidades.UConexion;
+import utilidades.UConection;
 
-public class Consultas {
+public class Servicio {
 
 	/**
 	 * el cual debe guardar en la base de datos el objeto. Debe armarse la query por
@@ -25,7 +25,7 @@ public class Consultas {
 	 * @param o
 	 */
 	public static void guardar(Object o) {
-		String query = "insert into ";
+		String query = "INSERT INTO ";
 		String nombreTabla = o.getClass().getAnnotation(Tabla.class).nombre();
 
 		query = query + nombreTabla + " (";
@@ -36,16 +36,34 @@ public class Consultas {
 		}
 
 		query = query.substring(0, query.length() - 1);
-		query = query += ") values (";
+		query = query += ") VALUES (";
 
 		for (Field atr : atributos) {
-			query = query += "?,";
+			if (atr.getType().getSimpleName().equals("String")) {
+				query += " '" + UBean.ejecutarGet(o, atr.getName()).toString() + "', ";
+			} else if (atr.getType().getSimpleName().equals("Long")) {
+				query += UBean.ejecutarGet(o, atr.getName()).toString() + " , ";
+			} else if (atr.getType().getSimpleName().equals("Integer")) {
+				query += UBean.ejecutarGet(o, atr.getName()).toString() + " , ";
+			}
 		}
 
-		query = query.substring(0, query.length() - 1);
+		query = query.substring(0, query.length() - 2);
 		query = query += ")";
 
 		System.out.println(query);
+
+		UConection uConexion = UConection.getInstance();
+		try {
+			Connection conexion = uConexion.abrirConexion();
+
+			PreparedStatement st = conexion.prepareStatement(query);
+
+			st.execute();
+			uConexion.cerrarConexion();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 
 	}
 
@@ -58,10 +76,10 @@ public class Consultas {
 	 * @param o
 	 */
 	public static void modificar(Object o) {
-		String query = "update ";
+		String query = "UPDATE ";
 		String nombreTabla = o.getClass().getAnnotation(Tabla.class).nombre();
 		String idTabla = "";
-		query = query + nombreTabla + " set ";
+		query = query + nombreTabla + " SET ";
 
 		ArrayList<Field> atributos = UBean.obtenerAtributos(o);
 
@@ -71,14 +89,25 @@ public class Consultas {
 				idTabla = UBean.ejecutarGet(o, attr.getName()).toString();
 			} else {
 				query += attr.getAnnotation(Columna.class).nombre() + "=";
-				query += "'" + UBean.ejecutarGet(o, attr.getName()) + "' ";
+				query += "'" + UBean.ejecutarGet(o, attr.getName()) + "', ";
 			}
 		}
 
-		query += "where id=" + idTabla;
+		query = query.substring(0, query.length() - 2);
+		query += "WHERE id=" + idTabla;
 
 		System.out.println(query);
+		UConection uConexion = UConection.getInstance();
+		try {
+			Connection conexion = uConexion.abrirConexion();
 
+			PreparedStatement st = conexion.prepareStatement(query);
+
+			st.execute();
+			uConexion.cerrarConexion();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -89,11 +118,11 @@ public class Consultas {
 	 * @param o
 	 */
 	public static void eliminar(Object o) {
-		String query = "delete from ";
+		String query = "DELETE FROM ";
 		String nombreTabla = o.getClass().getAnnotation(Tabla.class).nombre();
 		String idTabla = "";
 
-		query = query + nombreTabla + " where id=";
+		query = query + nombreTabla + " WHERE id=";
 
 		ArrayList<Field> atributos = UBean.obtenerAtributos(o);
 
@@ -108,6 +137,17 @@ public class Consultas {
 
 		System.out.println(query);
 
+		UConection uConexion = UConection.getInstance();
+		try {
+			Connection conexion = uConexion.abrirConexion();
+
+			PreparedStatement st = conexion.prepareStatement(query);
+
+			st.execute();
+			uConexion.cerrarConexion();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -121,11 +161,11 @@ public class Consultas {
 	 * @return
 	 */
 	public static Object obtenerPorId(Class c, Object id) {
-		String query = "select * from ";
+		String query = "SELECT * FROM ";
 		String nombreTabla = ((Tabla) c.getAnnotation(Tabla.class)).nombre();
 		String idTabla = "";
 		String nombreCampoId = "";
-		query = query + nombreTabla + " where ";
+		query = query + nombreTabla + " WHERE ";
 		Object retorno = null;
 
 		ArrayList<Field> atributos = UBean.obtenerAtributos(id);
@@ -139,9 +179,10 @@ public class Consultas {
 		}
 
 		query = query + nombreCampoId + "=" + idTabla;
+		System.out.println(query);
 		try {
-			System.out.println(query);
-			UConexion uConn = UConexion.getInstance();
+			
+			UConection uConn = UConection.getInstance();
 			Connection conn = uConn.abrirConexion();
 			PreparedStatement ps = conn.prepareStatement(query);
 
@@ -168,6 +209,7 @@ public class Consultas {
 
 				return retorno;
 			}
+			uConn.cerrarConexion();
 
 		} catch (SQLException | InstantiationException | IllegalAccessException | IllegalArgumentException
 				| InvocationTargetException e) {
